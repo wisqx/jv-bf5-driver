@@ -8,14 +8,17 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install WDK
-      run: choco install windowsdriverkit -y
+      run: |
+        winget install --id Microsoft.WindowsWDK.10.0.26100 `
+          --accept-package-agreements `
+          --accept-source-agreements `
+          --silent
 
     - name: Setup MSVC Environment
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Compile Driver
       run: |
-        # Ищем WDK (теперь там точно будет папка km)
         $wdkRoot = "C:\Program Files (x86)\Windows Kits\10"
         $wdkVer = (Get-ChildItem "$wdkRoot\Include" -Directory | Sort-Object Name | Select-Object -Last 1).Name
         $incPath = "$wdkRoot\Include\$wdkVer"
@@ -23,14 +26,12 @@ jobs:
         
         echo "Using WDK version: $wdkVer"
         
-        # Компиляция
         cl /nologo /TC /GS- /Gs9999999 /O2 /D_AMD64_ /D_WIN64_ /DUNICODE /D_UNICODE `
            /c /Fo:jv_driver.obj `
            /I"$incPath\km" /I"$incPath\shared" /I"$incPath\ucrt" `
            jv_driver.c
         if ($LASTEXITCODE -ne 0) { throw "Compilation failed" }
 
-        # Линковка
         link /nologo /DRIVER /SUBSYSTEM:NATIVE /MACHINE:X64 /ENTRY:DriverEntry `
              /OUT:jv_driver.sys `
              jv_driver.obj `
@@ -40,5 +41,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
+        name: jv_driver_sys
+        path: jv_driver.sys
         name: jv_driver_sys
         path: jv_driver.sys
