@@ -11,7 +11,7 @@ jobs:
       
     - name: Install WDK
       run: |
-        curl -L -o wdksetup.exe https://go.microsoft.com/fwlink/?linkid=2275353
+        curl.exe -L -o wdksetup.exe "https://go.microsoft.com/fwlink/?linkid=2275353"
         Start-Process -FilePath ".\wdksetup.exe" -ArgumentList "/quiet /norestart" -Wait
         
     - name: Compile Driver
