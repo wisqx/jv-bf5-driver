@@ -26,16 +26,10 @@ jobs:
         
         echo "Using WDK version: $wdkVer"
         
-        # Ищем все папки в проекте и добавляем их в пути поиска (чтобы наверняка найти shared.h)
-        $localIncludes = ""
-        Get-ChildItem -Directory -Recurse | ForEach-Object { $localIncludes += " /I`"$($_.FullName)`" " }
-        
-        echo "Compiling..."
-        
-        # Запускаем компиляцию с учетом всех найденных папок
+        # Ищем файлы в текущей папке (/I.)
         cl /nologo /TC /GS- /Gs9999999 /O2 /D_AMD64_ /D_WIN64_ /DUNICODE /D_UNICODE `
            /c /Fo:jv_driver.obj `
-           $localIncludes `
+           /I. `
            /I"$incPath\km" /I"$incPath\shared" /I"$incPath\ucrt" `
            jv_driver.c
         if ($LASTEXITCODE -ne 0) { throw "Compilation failed" }
