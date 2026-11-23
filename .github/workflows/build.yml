@@ -1,0 +1,27 @@
+name: Build Driver
+on: [push]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      
+    - name: Install WDK
+      run: |
+        curl -L -o wdksetup.exe https://go.microsoft.com/fwlink/?linkid=2275353
+        Start-Process -FilePath ".\wdksetup.exe" -ArgumentList "/quiet /norestart" -Wait
+        
+    - name: Compile Driver
+      run: |
+        $wdkPath = "C:\Program Files (x86)\Windows Kits\10"
+        cl /nologo /TC /GS- /Gs- /O2 /D_AMD64_ /D_WIN64_ /c /Fo:jv_driver.obj /I"$wdkPath\Include\10.0.22621.0\km" /I"$wdkPath\Include\10.0.22621.0\shared" jv_driver.c
+        link /nologo /DRIVER /SUBSYSTEM:NATIVE /OUT:jv_driver.sys jv_driver.obj /LIBPATH:"$wdkPath\Lib\10.0.22621.0\km\x64" ntoskrnl.lib hal.lib BufferOverflowK.lib
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: jv_driver_sys
+        path: jv_driver.sys
