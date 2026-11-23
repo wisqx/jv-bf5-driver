@@ -1,26 +1,36 @@
 name: Build Driver
-on: [push]
+on: [push, workflow_dispatch]
+
 jobs:
   build:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1.1
-      
+    - uses: actions/checkout@v4
+
+    - name: Setup MSVC Environment
+      uses: ilammy/msvc-dev-cmd@v1
+
     - name: Compile Driver
       run: |
-        # Ищем установленный WDK в системе
-        $wdkPath = (Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Include" -Directory | Select-Object -Last 1).FullName
-        $kmPath = "$wdkPath\km"
-        $sharedPath = "$wdkPath\shared"
-        $libPath = "$wdkPath\..\..\Lib\$(Split-Path $wdkPath -Leaf)\km\x64"
+        $wdkRoot = "C:\Program Files (x86)\Windows Kits\10"
+        $wdkVer = (Get-ChildItem "$wdkRoot\Include" -Directory | Sort-Object Name | Select-Object -Last 1).Name
+        $incPath = "$wdkRoot\Include\$wdkVer"
+        $libPath = "$wdkRoot\Lib\$wdkVer\km\x64"
         
-        echo "Using WDK: $wdkPath"
-        cl /nologo /TC /GS- /Gs- /O2 /D_AMD64_ /D_WIN64_ /c /Fo:jv_driver.obj /I"$kmPath" /I"$sharedPath" jv_driver.c
-        link /nologo /DRIVER /SUBSYSTEM:NATIVE /OUT:jv_driver.sys jv_driver.obj /LIBPATH:"$libPath" ntoskrnl.lib hal.lib BufferOverflowK.lib
+        echo "Using WDK version: $wdkVer"
         
+        cl /nologo /TC /GS- /Gs9999999 /O2 /D_AMD64_ /D_WIN64_ /DUNICODE /D_UNICODE `
+           /c /Fo:jv_driver.obj `
+           /I"$incPath\km" /I"$incPath\shared" /I"$incPath\ucrt" `
+           jv_driver.c
+        if ($LASTEXITCODE -ne 0) { throw "Compilation failed" }
+
+        link /nologo /DRIVER /SUBSYSTEM:NATIVE /MACHINE:X64 /ENTRY:DriverEntry `
+             /OUT:jv_driver.sys `
+             jv_driver.obj `
+             /LIBPATH:"$libPath" ntoskrnl.lib hal.lib BufferOverflowK.lib wdmsec.lib
+        if ($LASTEXITCODE -ne 0) { throw "Linkage failed" }
+
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
