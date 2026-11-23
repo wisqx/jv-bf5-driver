@@ -43,5 +43,3 @@ jobs:
       with:
         name: jv_driver_sys
         path: jv_driver.sys
-        name: jv_driver_sys
-        path: jv_driver.sys
